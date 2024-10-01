@@ -1,36 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>rorschach.ai?</title>
     <style>
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
         }
+
         #grid {
             display: grid;
             width: 100%;
             height: 100%;
         }
+
         .pixel {
-            width: 5px;
-            height: 5px;
+            width: 4px;
+            height: 4px;
         }
     </style>
 </head>
+
 <body>
     <div id="grid"></div>
 
     <script>
         const PIXEL_SIZE = 5;
         const DELAY = 1;
-        const SPREAD_CHANCE = 0.2;
-        const COLORS = ['red', 'green', 'blue', 'yellow', 'black', 'white'];
+        const SPREAD_CHANCE = 0.420;
+        const DEAD_CHANCE = 0.00069;
+
+        function generateBrightColor() {
+            // Ensure we get a bright component in the color
+            function getHighComponent() {
+                return Math.floor(Math.random() * 128) + 128; // Values between 128 and 255
+            }
+
+            // Ensure the component stays lower but still colorful
+            function getLowComponent() {
+                return Math.floor(Math.random() * 100); // Values between 0 and 99
+            }
+
+            // Pick two high components and one low one to ensure brightness
+            const components = [getHighComponent(), getHighComponent(), getLowComponent()];
+
+            // Shuffle the components to ensure random distribution of the bright values
+            components.sort(() => Math.random() - 0.5);
+
+            const [r, g, b] = components;
+
+            const color = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+
+            return color;
+        }
+
+
+        function generateBrightColor2() {
+            // Helper to ensure values are far apart to avoid greyish tones
+            function getRandomColorComponent() {
+                return Math.floor(Math.random() * (255 - 128) + 128); // Ensure it's not too dark
+            }
+
+            let r, g, b;
+
+            do {
+                r = getRandomColorComponent();
+                g = getRandomColorComponent();
+                b = getRandomColorComponent();
+            } while (Math.abs(r - g) < 30 && Math.abs(g - b) < 30 && Math.abs(b - r) < 30); // Avoid too similar values (greyish tones)
+
+            const color = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+
+            return color;
+        }
+
+        const COLORS = [generateBrightColor2(), generateBrightColor2(), generateBrightColor2(), generateBrightColor2(), generateBrightColor2(), generateBrightColor2()];
+        //['red', 'green', 'blue', 'yellow', 'black', 'white'];
+
         const grid = document.getElementById('grid');
         let pixelGrid = [];
         let GRID_WIDTH, GRID_HEIGHT;
@@ -80,9 +133,15 @@
                 visited.add(key);
 
                 const pixel = pixelGrid[y][x];
+                const randomly = Math.random();
+
+                if (randomly < DEAD_CHANCE)
+                    return;
+
                 if (pixel.style.backgroundColor !== color &&
-                    (pixel.dataset.value === startValue || Math.random() < SPREAD_CHANCE)) {
-                    pixel.style.backgroundColor = color;
+                    (pixel.dataset.value === startValue || randomly < SPREAD_CHANCE)) {
+
+                  pixel.style.backgroundColor = color;
 
                     // Check neighbors (including diagonals)
                     for (let dy = -1; dy <= 1; dy++) {
@@ -105,11 +164,11 @@
             const centerX = Math.floor(GRID_WIDTH / 2);
 
             await Promise.all([
-                spread(0, 0, 'red'),
-                spread(0, GRID_WIDTH - 1, 'green'),
-                spread(GRID_HEIGHT - 1, 0, 'blue'),
-                spread(GRID_HEIGHT - 1, GRID_WIDTH - 1, 'yellow'),
-                spread(centerY, centerX, 'black')
+                spread(0, 0, COLORS.pop()),
+                spread(0, GRID_WIDTH - 1, COLORS.pop()),
+                spread(GRID_HEIGHT - 1, 0, COLORS.pop()),
+                spread(GRID_HEIGHT - 1, GRID_WIDTH - 1, COLORS.pop()),
+                spread(centerY, centerX, COLORS.pop())
             ]);
         }
 
@@ -118,8 +177,7 @@
             if (pixel.classList.contains('pixel')) {
                 const x = parseInt(pixel.dataset.x);
                 const y = parseInt(pixel.dataset.y);
-                const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-                spread(y, x, randomColor);
+                spread(y, x, generateBrightColor());
             }
         }
 
@@ -130,4 +188,5 @@
         setTimeout(startMultiColorSpread, 100);
     </script>
 </body>
+
 </html>
